@@ -1,120 +1,134 @@
-import {useState, useEffect, useContext} from 'react'
-
+import {Component} from 'react'
+import Loader from 'react-loader-spinner'
 import Header from '../Header'
-import DishItem from '../DishItem'
-
-import CartContext from '../../context/CartContext'
-
+import Category from '../Category'
 import './index.css'
 
-const Home = () => {
-  const [isLoading, setIsLoading] = useState(true)
-  const [response, setResponse] = useState([])
-  const [activeCategoryId, setActiveCategoryId] = useState('')
+const apiStatusConstants = {
+  initial: 'INITIAL',
+  success: 'SUCCESS',
+  failure: 'FAILURE',
+  inProgress: 'IN_PROGRESS',
+}
 
-  const {cartList, setRestaurantName} = useContext(CartContext)
-
-  const getUpdatedData = tableMenuList =>
-    tableMenuList.map(eachMenu => ({
-      menuCategory: eachMenu.menu_category,
-      menuCategoryId: eachMenu.menu_category_id,
-      menuCategoryImage: eachMenu.menu_category_image,
-      categoryDishes: eachMenu.category_dishes.map(eachDish => ({
-        dishId: eachDish.dish_id,
-        dishName: eachDish.dish_name,
-        dishPrice: eachDish.dish_price,
-        dishImage: eachDish.dish_image,
-        dishCurrency: eachDish.dish_currency,
-        dishCalories: eachDish.dish_calories,
-        dishDescription: eachDish.dish_description,
-        dishAvailability: eachDish.dish_Availability,
-        dishType: eachDish.dish_Type,
-        addonCat: eachDish.addonCat,
-      })),
-    }))
-
-  const fetchRestaurantApi = async () => {
-    const api = 'https://run.mocky.io/v3/77a7e71b-804a-4fbd-822c-3e365d3482cc'
-    const apiResponse = await fetch(api)
-    const data = await apiResponse.json()
-    const updatedData = getUpdatedData(data[0].table_menu_list)
-    setResponse(updatedData)
-    setRestaurantName(data[0].restaurant_name)
-    setActiveCategoryId(updatedData[0].menuCategoryId)
-    setIsLoading(false)
+class Home extends Component {
+  state = {
+    status: apiStatusConstants.initial,
+    restaurantName: '',
+    listMenu: [],
+    valueCheck: '',
   }
 
-  useEffect(() => {
-    fetchRestaurantApi()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  componentDidMount() {
+    this.getApi()
+  }
 
-  const onUpdateActiveCategoryIdx = menuCategoryId =>
-    setActiveCategoryId(menuCategoryId)
-
-  const addItemToCart = () => {}
-
-  const removeItemFromCart = () => {}
-
-  const renderTabMenuList = () =>
-    response.map(eachCategory => {
-      const onClickHandler = () =>
-        onUpdateActiveCategoryIdx(eachCategory.menuCategoryId)
-
-      return (
-        <li
-          className={`each-tab-item ${
-            eachCategory.menuCategoryId === activeCategoryId
-              ? 'active-tab-item'
-              : ''
-          }`}
-          key={eachCategory.menuCategoryId}
-          onClick={onClickHandler}
-        >
-          <button
-            type="button"
-            className="mt-0 mb-0 ms-2 me-2 tab-category-button"
-          >
-            {eachCategory.menuCategory}
-          </button>
-        </li>
-      )
+  getApi = async () => {
+    this.setState({status: apiStatusConstants.inProgress})
+    const dishesApiUrl =
+      'https://run.mocky.io/v3/77a7e71b-804a-4fbd-822c-3e365d3482cc'
+    const response = await fetch(dishesApiUrl)
+    const data = await response.json()
+    const restaurantName = data[0].restaurant_name
+    const tableMenuList = data[0].table_menu_list
+    const dishQuantityAdd = tableMenuList.map(each => ({
+      categoryDishes: each.category_dishes.map(cate => ({
+        ...cate,
+        dishQuantity: 0,
+      })),
+      menuCategory: each.menu_category,
+      menuCategoryId: each.menu_category_id,
+    }))
+    this.setState({
+      listMenu: dishQuantityAdd,
+      restaurantName,
+      valueCheck: dishQuantityAdd[0].menuCategory,
+      status: apiStatusConstants.success,
     })
+  }
 
-  const renderDishes = () => {
-    const {categoryDishes} = response.find(
-      eachCategory => eachCategory.menuCategoryId === activeCategoryId,
+  onChooseList = value => {
+    this.setState({valueCheck: value})
+  }
+
+  onIncreaseDecreaseCount = (dishId, operator) => {
+    const {listMenu} = this.state
+    const finalValue = listMenu.map(each => ({
+      ...each,
+      categoryDishes: each.categoryDishes.map(eachDish => {
+        if (eachDish.dish_id === dishId) {
+          if (operator === 'decrement' && eachDish.dishQuantity > 0) {
+            return {
+              ...eachDish,
+              dishQuantity: eachDish.dishQuantity - 1,
+            }
+          }
+          if (operator === 'increment') {
+            return {
+              ...eachDish,
+              dishQuantity: eachDish.dishQuantity + 1,
+            }
+          }
+        }
+        return eachDish
+      }),
+    }))
+    this.setState({listMenu: finalValue})
+  }
+
+  renderLoader = () => (
+    <div data-testid="loader" className="loader-container">
+      <Loader type="Rings" color="#00BFFF" height={80} width={80} />
+    </div>
+  )
+
+  renderSuccessView = () => {
+    const {listMenu, valueCheck, restaurantName} = this.state
+    const filteredDishes = listMenu.filter(
+      each => each.menuCategory === valueCheck,
     )
-
     return (
-      <ul className="m-0 d-flex flex-column dishes-list-container">
-        {categoryDishes.map(eachDish => (
-          <DishItem
-            key={eachDish.dishId}
-            dishDetails={eachDish}
-            addItemToCart={addItemToCart}
-            removeItemFromCart={removeItemFromCart}
+      <>
+        <Header restaurantName={restaurantName} />
+        <ul className="menu_container">
+          {listMenu.map(each => (
+            <li key={each.menuCategoryId}>
+              <button
+                type="button"
+                className={
+                  each.menuCategory === valueCheck
+                    ? 'chosen-button'
+                    : 'category-button'
+                }
+                onClick={() => this.onChooseList(each.menuCategory)}
+              >
+                {each.menuCategory}
+              </button>
+            </li>
+          ))}
+        </ul>
+        {filteredDishes.map(each => (
+          <Category
+            nextComponent={each.categoryDishes}
+            key={each.menuCategoryId}
+            onDecreaseIncrease={this.onIncreaseDecreaseCount}
           />
         ))}
-      </ul>
+      </>
     )
   }
 
-  const renderSpinner = () => (
-    <div className="spinner-container">
-      <div className="spinner-border" role="status" />
-    </div>
-  )
+  render() {
+    const {status} = this.state
 
-  return isLoading ? (
-    renderSpinner()
-  ) : (
-    <div className="home-background">
-      <Header cartItems={cartList} />
-      <ul className="m-0 ps-0 d-flex tab-container">{renderTabMenuList()}</ul>
-      {renderDishes()}
-    </div>
-  )
+    return (
+      <>
+        {status === apiStatusConstants.inProgress
+          ? this.renderLoader()
+          : this.renderSuccessView()}
+      </>
+    )
+  }
 }
 
 export default Home

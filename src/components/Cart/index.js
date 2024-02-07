@@ -1,54 +1,111 @@
-import {useContext} from 'react'
-
 import Header from '../Header'
-import CartItem from '../CartItem'
-
 import CartContext from '../../context/CartContext'
-
 import './index.css'
 
-const Cart = () => {
-  const {cartList, removeAllCartItems} = useContext(CartContext)
+const Cart = props => (
+  <CartContext.Consumer>
+    {countValue => {
+      const {
+        cartList,
+        decrementCartItemQuantity,
+        incrementCartItemQuantity,
+        removeCartItem,
+        removeAllCartItems,
+      } = countValue
 
-  const renderEmptyView = () => (
-    <div className="m-auto d-flex flex-column align-items-center">
-      <img
-        src="https://assets.ccbp.in/frontend/react-js/nxt-trendz-empty-cart-img.png"
-        alt="empty view"
-        className="empty-view-image"
-      />
-      <p className="empty-description">Your cart is Empty.</p>
-    </div>
-  )
+      const {location} = props
+      const {state} = location
+      const cartLength = cartList.length
 
-  const renderCartItems = () => (
-    <>
-      <div className="cart-items-header d-flex align-items-center justify-content-between">
-        <h1>Cart Items</h1>
-        <button
-          type="button"
-          className="remove-all-btn text-primary"
-          onClick={removeAllCartItems}
-        >
-          Remove All
-        </button>
-      </div>
-      <ul className="ps-0 d-flex flex-column align-items-center">
-        {cartList.map(dish => (
-          <CartItem key={dish.dishId} cartItemDetails={dish} />
-        ))}
-      </ul>
-    </>
-  )
+      const onDecrement = id => {
+        decrementCartItemQuantity(id)
+      }
 
-  return (
-    <div className="cart-page-container d-flex flex-column">
-      <Header />
-      <div className="cart-body-container d-flex flex-column">
-        {cartList.length === 0 ? renderEmptyView() : renderCartItems()}
-      </div>
-    </div>
-  )
-}
+      const onIncrement = id => {
+        incrementCartItemQuantity(id)
+      }
+      const onRemoveSeparate = id => {
+        removeCartItem(id)
+      }
+
+      const removeAllCart = () => {
+        removeAllCartItems()
+      }
+
+      const renderCartListView = () => (
+        <div className="mainCartContainer">
+          <button
+            type="button"
+            className="removeButton"
+            onClick={removeAllCart}
+          >
+            Remove All
+          </button>
+          <ul className="unOrderList">
+            {cartList.map(each => (
+              <li className="listItem" key={each.dishId}>
+                <div className="detailsList">
+                  <img
+                    src={each.dishImage}
+                    alt={each.dishName}
+                    className="dishImage"
+                  />
+                  <div className="detailsDiv">
+                    <p className="dishName">{each.dishName}</p>
+                  </div>
+                </div>
+                <div className="quantityAdjust">
+                  <button
+                    type="button"
+                    className="buttonOperation"
+                    onClick={() => onDecrement(each.dishId)}
+                  >
+                    -
+                  </button>
+                  <p className="quantity">{each.dishQuantity}</p>
+                  <button
+                    type="button"
+                    className="buttonOperation"
+                    onClick={() => onIncrement(each.dishId)}
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="priceContainer">
+                  <p>SAR {each.dishQuantity * each.dishPrice} -/</p>
+                </div>
+                <button
+                  type="button"
+                  className="removeButton"
+                  onClick={() => onRemoveSeparate(each.dishId)}
+                >
+                  Remove All
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+
+      const renderEmptyView = () => (
+        <div className="emptyViewContainer">
+          <img
+            src="https://assets.ccbp.in/frontend/react-js/nxt-trendz-empty-cart-img.png"
+            className="emptyCartView"
+            alt="emptyView"
+          />
+          <p>Your Cart is Empty</p>
+        </div>
+      )
+
+      return (
+        <>
+          <Header restaurantName={state} />
+          {cartLength === 0 ? renderEmptyView() : renderCartListView()}
+        </>
+      )
+    }}
+  </CartContext.Consumer>
+)
 
 export default Cart
