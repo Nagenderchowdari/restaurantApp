@@ -1,5 +1,5 @@
 import {Component} from 'react'
-import {Route, Switch} from 'react-router-dom'
+import {BrowserRouter, Route, Switch} from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './components/Home'
 import Cart from './components/Cart'
@@ -87,12 +87,14 @@ class App extends Component {
           decrementCartItemQuantity: this.decrementCartItemQuantity,
         }}
       >
-        <Switch>
-          <Route exact path="/login" component={Login} />
-          <ProtectedRoute exact path="/" component={Home} />
-          <ProtectedRoute exact path="/cart" component={Cart} />
-          <Route path="/not-found" component={NotFound} />
-        </Switch>
+        <BrowserRouter>
+          <Switch>
+            <Route exact path="/login" component={Login} />
+            <ProtectedRoute exact path="/" component={Home} />
+            <ProtectedRoute exact path="/cart" component={Cart} />
+            <Route path="/not-found" component={NotFound} />
+          </Switch>
+       </BrowserRouter>
       </CartContext.Provider>
     )
   }
